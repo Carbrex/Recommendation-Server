@@ -34,7 +34,7 @@ def get_blog_ids(user_id, page=1, page_size=10):
     loaded_model_tuple = load(model_path)
     loaded_model = loaded_model_tuple[1]
 
-    all_items = set(str(item['_id']) for item in blogs_collection.find())
+    all_items = set(blogs_collection.distinct('_id'))
     unrated_items = list(all_items)
     
     predictions = [(item_id, loaded_model.predict(user_id, item_id).est) for item_id in unrated_items]
@@ -67,15 +67,15 @@ def train_model():
             rating = 0
 
             if item_id in articles_read:
-                rating += 1
+                rating += 0.5
             if item_id in articles_wrote:
-                rating += 2
+                rating += 0.5
             if blog.get('tags') and any(tag in user_interests for tag in blog['tags']):
                 rating += 0.5
             if item_id in following:
                 rating += 0.5
-            rating += blog.get('views', 0) * 0.1
-            rating += blog.get('likesCount', 0) * 0.5
+            rating += blog.get('views', 0) * 0.0001
+            rating += blog.get('likesCount', 0) * 0.0001
 
             user_item_rating_data.append({'user_id': user_id, 'item_id': item_id, 'rating': rating})
 
