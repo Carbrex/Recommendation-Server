@@ -55,13 +55,19 @@ def get_blogs(user_id, page=1, page_size=10):
         # Fetch author details from users_collection
         author_details = users_collection.find_one({'_id': blog['author']})
         if author_details:
-            blog['author_name'] = author_details.get('name', '')
-            blog['author_profile_img'] = author_details.get('profileImage', '')
+            author = {
+                '_id': str(author_details['_id']),
+                'name': author_details.get('name', ''),
+                'profileImage': author_details.get('profileImage', '')
+            }
+            blog['author'] = author
         else:
-            blog['author_name'] = ''
-            blog['author_profile_img'] = ''
+            blog['author'] = {
+                '_id': '',
+                'name': '',
+                'profileImage': ''
+            }
 
-        blog['author'] = str(blog['author'])
         del blog['content']
         del blog['comments']
           
@@ -69,6 +75,7 @@ def get_blogs(user_id, page=1, page_size=10):
     response = {'user_id': str(user_id), 'top_recommendations': top_blogs}
     
     return jsonify(response)
+
 
 
 def train_model():
