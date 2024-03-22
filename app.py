@@ -8,6 +8,7 @@ from flask_cors import CORS, cross_origin
 import json
 import os
 from dotenv import load_dotenv
+import math
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -61,23 +62,22 @@ def train_model():
         following = user.get('following', [])
         articles_read = user.get('readArticles', [])
         articles_wrote = user.get('blogs', [])
-
         for blog in blogs_collection.find():
-            item_id = str(blog['_id'])
+            item_id = blog['_id']
             rating = 0
-
             if item_id in articles_read:
-                rating += 0.5
+                rating += 0.5  # Increment rating if the user has read the article
             if item_id in articles_wrote:
-                rating += 0.5
+                rating += 0.5  # Increment rating if the user has written the article
             if blog.get('tags') and any(tag in user_interests for tag in blog['tags']):
-                rating += 0.5
-            if item_id in following:
-                rating += 0.5
-            rating += blog.get('views', 0) * 0.0001
-            rating += blog.get('likesCount', 0) * 0.0001
-
+                rating += 0.5  # Increment rating if the article matches user interests
+            if blog.get('author') in following:
+                rating += 0.5  # Increment rating if the article is written by a user the current user is following
+       
+            rating += math.log(1 + blog.get('views', 1)) * 0.2
+            rating += math.log(1 + blog.get('likesCount', 1)) * 0.2
             user_item_rating_data.append({'user_id': user_id, 'item_id': item_id, 'rating': rating})
+
 
     reader = Reader(rating_scale=(0, 10))
     data = Dataset.load_from_df(pd.DataFrame(user_item_rating_data), reader)
