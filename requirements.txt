@@ -1,4 +1,4 @@
-scikit-surprise
+surprise
 flask
 pymongo
 pandas
