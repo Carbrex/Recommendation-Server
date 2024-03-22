@@ -25,7 +25,7 @@ CORS(app)
 
 
 client = MongoClient(MONGO_URL)
-db = client['test']
+db = client['blogminds']
 blogs_collection = db['blogs']
 users_collection = db['users']
 
@@ -48,8 +48,6 @@ def get_blog_ids(user_id, page=1, page_size=10):
     response = {'user_id': str(user_id), 'top_recommendations': []}
     for item_id, rating in paginated_predictions:
         response['top_recommendations'].append({'item_id': str(item_id), 'rating': rating})
-
-    print(response)
     
     return json.dumps(response)
 
