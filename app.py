@@ -100,7 +100,7 @@ def get_blog_ids_route():
     page_size = request.args.get('page_size')
     if not user_id:
         return jsonify({'error': 'User ID parameter is missing'}), 400
-    return jsonify(get_blog_ids(user_id, int(page), int(page_size))), 200
+    return get_blog_ids(user_id, int(page), int(page_size))
 
 
 @app.route('/train_model', methods=['get'])
