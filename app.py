@@ -30,7 +30,7 @@ db = client['blogminds']
 blogs_collection = db['blogs']
 users_collection = db['users']
 
-def get_blog_ids(user_id, page=1, page_size=10):
+def get_blogs(user_id, page=1, page_size=10):
     model_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'model.dump')
     loaded_model_tuple = load(model_path)
     loaded_model = loaded_model_tuple[1]
@@ -52,13 +52,23 @@ def get_blog_ids(user_id, page=1, page_size=10):
     
     for blog in top_blogs:
         blog['_id'] = str(blog['_id'])
+        # Fetch author details from users_collection
+        author_details = users_collection.find_one({'_id': blog['author']})
+        if author_details:
+            blog['author_name'] = author_details.get('name', '')
+            blog['author_profile_img'] = author_details.get('profileImage', '')
+        else:
+            blog['author_name'] = ''
+            blog['author_profile_img'] = ''
+
         blog['author'] = str(blog['author'])
+        del blog['content']
+        del blog['comments']
           
     
     response = {'user_id': str(user_id), 'top_recommendations': top_blogs}
     
     return jsonify(response)
-
 
 
 def train_model():
@@ -98,15 +108,15 @@ def train_model():
 
 app = Flask(__name__)
 
-@app.route('/get_blog_ids', methods=['GET'])
+@app.route('/get_blogs', methods=['GET'])
 @cross_origin()
-def get_blog_ids_route():
+def get_blog_route():
     user_id = request.args.get('user_id')
     page = request.args.get('page')
     page_size = request.args.get('page_size')
     if not user_id:
         return jsonify({'error': 'User ID parameter is missing'}), 400
-    return get_blog_ids(user_id, int(page), int(page_size))
+    return get_blogs(user_id, int(page), int(page_size))
 
 
 @app.route('/train_model', methods=['get'])
