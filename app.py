@@ -46,11 +46,19 @@ def get_blog_ids(user_id, page=1, page_size=10):
     end_index = start_index + page_size
     paginated_predictions = sorted_predictions[start_index:end_index]
     
-    response = {'user_id': str(user_id), 'top_recommendations': []}
-    for item_id, rating in paginated_predictions:
-        response['top_recommendations'].append({'item_id': str(item_id), 'rating': rating})
+    top_blog_ids = [item_id for item_id, _ in paginated_predictions]
+    # Fetch details of the top recommended blogs
+    top_blogs = list(blogs_collection.find({'_id': {'$in': top_blog_ids}}))
     
-    return json.dumps(response)
+    for blog in top_blogs:
+        blog['_id'] = str(blog['_id'])
+        blog['author'] = str(blog['author'])
+          
+    
+    response = {'user_id': str(user_id), 'top_recommendations': top_blogs}
+    
+    return jsonify(response)
+
 
 
 def train_model():
