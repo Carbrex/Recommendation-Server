@@ -62,18 +62,6 @@ def get_blogs(user_id, page=1, page_size=10):
     # Fetch details of the top recommended blogs
     pipeline = [
         {"$match": {'_id': {'$in': top_blog_ids}}},
-        {"$project": {
-            "title": 1,
-            "description": 1,
-            "img": 1,
-            "tags": 1,
-            "views": 1,
-            "likesCount": 1,
-            "commentsCount": 1,
-            "createdAt": 1,
-            "updatedAt": 1,
-            "author": 1,
-        }},
         {"$lookup": {
             "from": "users",
             "localField": "author",
@@ -91,9 +79,11 @@ def get_blogs(user_id, page=1, page_size=10):
             "commentsCount": 1,
             "createdAt": 1,
             "updatedAt": 1,
-            "author._id": "$author_info._id",
-            "author.name": "$author_info.name",
-            "author.profileImage": "$author_info.profileImage"
+            "author": {
+                "_id": "$author_info._id",
+                "name": "$author_info.name",
+                "profileImage": "$author_info.profileImage"
+            }
         }}
     ]
 
