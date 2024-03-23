@@ -9,6 +9,7 @@ import json
 import os
 from dotenv import load_dotenv
 import math
+import time
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -30,13 +31,24 @@ db = client['blogminds']
 blogs_collection = db['blogs']
 users_collection = db['users']
 
+unrated_items = []
+last_updated = 0
+
+def get_unrated_items():
+    global unrated_items
+    global last_updated
+    current_time = time.time()
+    if current_time - last_updated > 60:
+        unrated_items = list(blogs_collection.distinct('_id'))
+        last_updated = current_time
+    return unrated_items
+
 def get_blogs(user_id, page=1, page_size=10):
     model_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'model.dump')
     loaded_model_tuple = load(model_path)
     loaded_model = loaded_model_tuple[1]
 
-    all_items = set(blogs_collection.distinct('_id'))
-    unrated_items = list(all_items)
+    unrated_items = get_unrated_items()
     
     predictions = [(item_id, loaded_model.predict(user_id, item_id).est) for item_id in unrated_items]
     
@@ -45,33 +57,52 @@ def get_blogs(user_id, page=1, page_size=10):
     start_index = (page - 1) * page_size
     end_index = start_index + page_size
     paginated_predictions = sorted_predictions[start_index:end_index]
-    
+
     top_blog_ids = [item_id for item_id, _ in paginated_predictions]
     # Fetch details of the top recommended blogs
-    top_blogs = list(blogs_collection.find({'_id': {'$in': top_blog_ids}}))
-    
+    pipeline = [
+        {"$match": {'_id': {'$in': top_blog_ids}}},
+        {"$project": {
+            "title": 1,
+            "description": 1,
+            "img": 1,
+            "tags": 1,
+            "views": 1,
+            "likesCount": 1,
+            "commentsCount": 1,
+            "createdAt": 1,
+            "updatedAt": 1,
+            "author": 1,
+        }},
+        {"$lookup": {
+            "from": "users",
+            "localField": "author",
+            "foreignField": "_id",
+            "as": "author_info"
+        }},
+        {"$unwind": "$author_info"},
+        {"$project": {
+            "title": 1,
+            "description": 1,
+            "img": 1,
+            "tags": 1,
+            "views": 1,
+            "likesCount": 1,
+            "commentsCount": 1,
+            "createdAt": 1,
+            "updatedAt": 1,
+            "author._id": "$author_info._id",
+            "author.name": "$author_info.name",
+            "author.profileImage": "$author_info.profileImage"
+        }}
+    ]
+
+    top_blogs = list(blogs_collection.aggregate(pipeline))
+
     for blog in top_blogs:
         blog['_id'] = str(blog['_id'])
-        # Fetch author details from users_collection
-        author_details = users_collection.find_one({'_id': blog['author']})
-        if author_details:
-            author = {
-                '_id': str(author_details['_id']),
-                'name': author_details.get('name', ''),
-                'profileImage': author_details.get('profileImage', '')
-            }
-            blog['author'] = author
-        else:
-            blog['author'] = {
-                '_id': '',
-                'name': '',
-                'profileImage': ''
-            }
+        blog['author']['_id'] = str(blog['author']['_id'])
 
-        del blog['content']
-        del blog['comments']
-          
-    
     response = {'user_id': str(user_id), 'top_recommendations': top_blogs}
     
     return jsonify(response)
