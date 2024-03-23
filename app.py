@@ -64,12 +64,13 @@ def update_unrated_items():
 # @do_profile(follow=True)
 def get_unrated_items():
     global unrated_items, last_update, last_model_update
-    if datetime.now() - last_update > timedelta(minutes=10):
+    currTime = datetime.now()
+    if currTime - last_update > timedelta(minutes=10):
         Thread(target=update_unrated_items).start()
-        last_update = datetime.now()
-    if datetime.now() - last_model_update > timedelta(minutes=100):
+        last_update = currTime
+    if currTime - last_model_update > timedelta(minutes=100):
         Thread(target=train_model).start()
-        last_model_update = datetime.now()
+        last_model_update = currTime
     return unrated_items
 
 
@@ -177,6 +178,7 @@ def train_model():
 
 @app.route('/get_blogs', methods=['GET'])
 @cross_origin()
+# @do_profile(follow=True)
 def get_blog_route():
     user_id = request.args.get('user_id')
     page = request.args.get('page')
