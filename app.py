@@ -162,7 +162,8 @@ def train_model():
     dump(model_dump_file, algo=model)
     global loaded_model
     loaded_model = model
-    return jsonify({'message': 'Model trained successfully'})
+    with app.app_context():
+        return jsonify({'message': 'Model trained successfully'})
 
 # app = Flask(__name__)
 
@@ -184,7 +185,7 @@ def train_model_route():
 
 if __name__ == '__main__':
     update_unrated_items()
-    load_model()
+
     # run a thread to train the model
     Thread(target=train_model).start()
     app.run(debug=True)
