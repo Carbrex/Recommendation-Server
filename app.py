@@ -9,7 +9,26 @@ import json
 import os
 from dotenv import load_dotenv
 import math
-import time
+# import time
+from threading import Thread
+from datetime import datetime, timedelta
+# from line_profiler import LineProfiler
+
+# def do_profile(follow=False):
+#     def inner(func):
+#         def profiled_func(*args, **kwargs):
+#             try:
+#                 profiler = LineProfiler()
+#                 profiler.add_function(func)
+#                 if follow:
+#                     return profiler.runcall(func, *args, **kwargs)
+#                 else:
+#                     return func(*args, **kwargs)
+#             finally:
+#                 profiler.print_stats()
+#         return profiled_func
+#     return inner
+
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -21,7 +40,6 @@ load_dotenv(env_file_path)
 
 MONGO_URL = os.environ.get('MONGO_URL')
 
-
 app = Flask(__name__)
 CORS(app)
 
@@ -32,21 +50,32 @@ blogs_collection = db['blogs']
 users_collection = db['users']
 
 unrated_items = []
-last_updated = 0
+last_update = datetime(1970, 1, 1)
+model_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'model.dump')
+loaded_model_tuple = load(model_path)
+loaded_model = loaded_model_tuple[1]
+last_model_update = datetime(1970, 1, 1)
 
-def get_unrated_items():
+# @do_profile(follow=True)
+def update_unrated_items():
     global unrated_items
-    global last_updated
-    current_time = time.time()
-    if current_time - last_updated > 60:
-        unrated_items = list(blogs_collection.distinct('_id'))
-        last_updated = current_time
+    unrated_items = list(blogs_collection.distinct('_id'))
+
+# @do_profile(follow=True)
+def get_unrated_items():
+    global unrated_items, last_update, last_model_update
+    if datetime.now() - last_update > timedelta(minutes=10):
+        Thread(target=update_unrated_items).start()
+        last_update = datetime.now()
+    if datetime.now() - last_model_update > timedelta(minutes=100):
+        Thread(target=train_model).start()
+        last_model_update = datetime.now()
     return unrated_items
 
+
+# @do_profile(follow=True)
 def get_blogs(user_id, page=1, page_size=10):
-    model_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'model.dump')
-    loaded_model_tuple = load(model_path)
-    loaded_model = loaded_model_tuple[1]
+    global loaded_model
 
     unrated_items = get_unrated_items()
     
@@ -107,8 +136,6 @@ def get_blogs(user_id, page=1, page_size=10):
     
     return jsonify(response)
 
-
-
 def train_model():
     user_item_rating_data = []
 
@@ -142,9 +169,11 @@ def train_model():
     model.fit(trainset)
     model_dump_file = 'model.dump'
     dump(model_dump_file, algo=model)
+    global loaded_model
+    loaded_model = model
     return jsonify({'message': 'Model trained successfully'})
 
-app = Flask(__name__)
+# app = Flask(__name__)
 
 @app.route('/get_blogs', methods=['GET'])
 @cross_origin()
@@ -162,4 +191,8 @@ def train_model_route():
     return train_model()
 
 if __name__ == '__main__':
+    update_unrated_items()
+    load_model()
+    # run a thread to train the model
+    Thread(target=train_model).start()
     app.run(debug=True)
