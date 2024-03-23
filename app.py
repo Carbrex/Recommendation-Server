@@ -5,13 +5,12 @@ from surprise import Dataset, Reader, SVD
 from surprise.model_selection import train_test_split
 from surprise.dump import dump, load
 from flask_cors import CORS, cross_origin
-import json
 import os
 from dotenv import load_dotenv
 import math
-# import time
 from threading import Thread
 from datetime import datetime, timedelta
+
 # from line_profiler import LineProfiler
 
 # def do_profile(follow=False):
@@ -32,9 +31,7 @@ from datetime import datetime, timedelta
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
-root_dir = os.path.abspath(os.path.join(script_dir, '..'))
-
-env_file_path = os.path.join(root_dir, '.env')
+env_file_path = os.path.join(script_dir, '.env')
 
 load_dotenv(env_file_path)
 
@@ -43,9 +40,10 @@ MONGO_URL = os.environ.get('MONGO_URL')
 app = Flask(__name__)
 CORS(app)
 
-
 client = MongoClient(MONGO_URL)
-db = client['blogminds']
+
+db_name = MONGO_URL.split('/')[-1].split('?')[0]
+db = client[db_name]
 blogs_collection = db['blogs']
 users_collection = db['users']
 
