@@ -63,10 +63,10 @@ def update_unrated_items():
 def get_unrated_items():
     global unrated_items, last_update, last_model_update
     currTime = datetime.now()
-    if currTime - last_update > timedelta(minutes=10):
+    if currTime - last_update > timedelta(minutes=100):
         Thread(target=update_unrated_items).start()
         last_update = currTime
-    if currTime - last_model_update > timedelta(minutes=100):
+    if currTime - last_model_update > timedelta(minutes=1000):
         Thread(target=train_model).start()
         last_model_update = currTime
     return unrated_items
